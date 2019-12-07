@@ -1,6 +1,7 @@
 (ns page-rank.core
   (:require [clojure.java.io :as io])
   (:require [clojure.string :as str])
+  (:import (java.util.concurrent Executors))
 )
 
 (def pagesfile "pages.txt")
@@ -75,43 +76,54 @@
     )
   )
 
-  (println (GetOutboundPages pages 0))
-  (println (GetInboundPages pages 0))
 
-  (def thread 
-    (Thread. (fn []
-      (def pageranks
-        (loop [x 0, ranks []]
-          (if (< x (- pagecount 1))
-            (recur
-              (+ x 1) 
-              (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
-            )
-            ranks
-          )
-        )
-      )
-      (println pageranks)
-    ))
-  )
+  (defn test-stm [nitems nthreads niters]
+    (let [refs  (map ref (repeat nitems 0))
+          pool  (Executors/newFixedThreadPool nthreads)
+          tasks (map (fn [t]
+                        (fn []
+                          (dotimes [n niters]
+                            (dosync
+                              (doseq [r refs]
+                                (alter r + 1 t))))))
+                    (range nthreads))]
+      (doseq [future (.invokeAll pool tasks)]
+        (.get future))
+      (.shutdown pool)
+      (map deref refs)))
 
-  (def thread2 
-    (Thread. (fn []
-      (def pageranks
-        (loop [x 501, ranks []]
-          (if (< x (- pagecount 1))
-            (recur
-              (+ x 1) 
-              (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
-            )
-            ranks
-          )
-        )
-      )
-      (println pageranks)
-    ))
-  )
+      (println (test-stm 10 10 10000))
+  ; (def thread 
+  ;   (Thread. (fn []
+  ;     (def pageranks
+  ;       (loop [x 0, ranks []]
+  ;         (if (< x (- pagecount 1))
+  ;           (recur
+  ;             (+ x 1) 
+  ;             (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
+  ;           )
+  ;           ranks
+  ;         )
+  ;       )
+  ;     )
+  ;     (println pageranks)
+  ;   ))
+  ; )
 
-  (.start thread)
-  (.start thread2)
+  ; (def thread2 
+  ;   (Thread. (fn []
+  ;     (def pageranks
+  ;       (loop [x 501, ranks []]
+  ;         (if (< x (- pagecount 1))
+  ;           (recur
+  ;             (+ x 1) 
+  ;             (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
+  ;           )
+  ;           ranks
+  ;         )
+  ;       )
+  ;     )
+  ;     (println pageranks)
+  ;   ))
+  ; )
 )
