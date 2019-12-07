@@ -71,26 +71,47 @@
 
   (doseq [line (Reader)]
     (def pages 
-      (conj pages (str/split line #" "))
+      (conj pages (nthrest (str/split line #" ") 1))
     )
   )
-
 
   (println (GetOutboundPages pages 0))
   (println (GetInboundPages pages 0))
 
-
-  (def pageranks
-    (loop [x 0, ranks []]
-      (if (< x pagecount)
-        (recur
-          (+ x 1) 
-          (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
+  (def thread 
+    (Thread. (fn []
+      (def pageranks
+        (loop [x 0, ranks []]
+          (if (< x (- pagecount 1))
+            (recur
+              (+ x 1) 
+              (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
+            )
+            ranks
+          )
         )
-        ranks
       )
-    )  
+      (println pageranks)
+    ))
   )
 
-  (println pageranks)
+  (def thread2 
+    (Thread. (fn []
+      (def pageranks
+        (loop [x 501, ranks []]
+          (if (< x (- pagecount 1))
+            (recur
+              (+ x 1) 
+              (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
+            )
+            ranks
+          )
+        )
+      )
+      (println pageranks)
+    ))
+  )
+
+  (.start thread)
+  (.start thread2)
 )
