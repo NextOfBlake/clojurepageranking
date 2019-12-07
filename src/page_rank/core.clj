@@ -28,13 +28,8 @@
 )
 
 (defn GetPageRank [page]
-  (get pageranks page)
+  (get pageranks page)  
 )
-
-(defn SetPageRank [page value]
-  (assoc pageranks page value)
-)
-
 
 (defn GetOutboundPages [pages from]
   (get pages from)
@@ -53,23 +48,22 @@
 )
 
 (defn CalculatePageRank [pages inbound_pages]
-  ; (+ (- 1 weight) 
-  ;   (* weight 
-  ;     ; summation
-
-  ;   )
-  ; )
-  (loop [x 0, sum 0]
-    (if (< x (count inbound_pages))
-      (recur (+ x 1)
-        (+ sum 
-          (/ GetPageRank (get inbound_pages x) (count (GetOutboundPages pages (get inbound_pages x))))
+  (+ (- 1 weight) 
+    (* weight 
+      ; summation
+      (loop [x 0, sum 0]
+        (if (< x (count inbound_pages))
+          (recur 
+            (+ x 1)
+            (+ sum 
+              (/ (GetPageRank (get inbound_pages x)) (count (GetOutboundPages pages (get inbound_pages x))))
+            )
+          )
+          sum
         )
       )
-      sum
     )
   )
-
 )
 
 (defn -main []
@@ -80,9 +74,23 @@
       (conj pages (str/split line #" "))
     )
   )
-  
+
+
   (println (GetOutboundPages pages 0))
   (println (GetInboundPages pages 0))
 
-  (println (CalculatePageRank pages (GetInboundPages pages 0)))
+
+  (def pageranks
+    (loop [x 0, ranks []]
+      (if (< x pagecount)
+        (recur
+          (+ x 1) 
+          (conj ranks (CalculatePageRank pages (GetInboundPages pages x)))
+        )
+        ranks
+      )
+    )  
+  )
+
+  (println pageranks)
 )
